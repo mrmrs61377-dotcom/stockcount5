@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StockCount">
+<title>StockCount</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --teal-50: #E1F5EE; --teal-400: #1D9E75; --teal-600: #0F6E56; --teal-800: #085041;
+    --amber-400: #BA7517; --amber-50: #FAEEDA;
+    --red-400: #E24B4A; --red-50: #FCEBEB; --red-600: #993C1D;
+    --blue-400: #378ADD; --blue-50: #E6F1FB;
+    --gray-100: #D3D1C7;
+    --bg: #F7F6F2; --surface: #FFFFFF; --text: #1a1a18; --muted: #6b6b67; --border: rgba(0,0,0,0.1);
+    --radius: 14px; --radius-sm: 9px;
+  }
+  html, body { height: 100%; background: var(--bg); font-family: -apple-system, 'SF Pro Text', sans-serif; color: var(--text); overflow-x: hidden; }
+  body { padding-bottom: env(safe-area-inset-bottom, 20px); }
+
+  .topbar { background: var(--teal-600); color: #fff; padding: 56px 18px 18px; display: flex; align-items: flex-end; justify-content: space-between; }
+  .topbar-title { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; color: #fff; }
+  .topbar-sub { font-size: 13px; opacity: 0.7; margin-top: 2px; color: #fff; }
+  .topbar-badge { background: rgba(255,255,255,0.2); border-radius: 20px; padding: 5px 12px; font-size: 13px; color: #fff; white-space: nowrap; }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 16px; }
+  .stat { background: var(--surface); border-radius: var(--radius-sm); padding: 12px 10px; border: 0.5px solid var(--border); }
+  .stat-n { font-size: 22px; font-weight: 600; color: var(--text); }
+  .stat-l { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 16px; }
+  .act-btn { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; cursor: pointer; -webkit-appearance: none; text-align: left; transition: transform 0.1s; }
+  .act-btn:active { transform: scale(0.96); }
+  .act-icon { width: 36px; height: 36px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .act-label { font-size: 14px; font-weight: 600; color: var(--text); }
+  .act-sub { font-size: 11px; color: var(--muted); }
+  .icon-teal { background: var(--teal-50); color: var(--teal-600); }
+  .icon-blue { background: var(--blue-50); color: var(--blue-400); }
+  .icon-amber { background: var(--amber-50); color: var(--amber-400); }
+  .icon-red { background: var(--red-50); color: var(--red-400); }
+
+  .search-wrap { padding: 0 16px 12px; position: relative; }
+  .search-wrap input { width: 100%; padding: 11px 14px 11px 40px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--surface); font-size: 15px; color: var(--text); -webkit-appearance: none; }
+  .search-wrap input::placeholder { color: var(--muted); }
+  .search-icon { position: absolute; left: 27px; top: 50%; transform: translateY(-50%); font-size: 17px; color: var(--muted); pointer-events: none; }
+
+  .section-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; padding: 0 16px 8px; }
+
+  .item-list { padding: 0 16px; display: flex; flex-direction: column; gap: 8px; padding-bottom: 40px; }
+  .item-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 13px 14px; display: flex; align-items: center; gap: 12px; }
+  .item-num-badge { font-size: 11px; color: var(--teal-800); background: var(--teal-50); border-radius: 6px; padding: 3px 8px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+  .item-info { flex: 1; min-width: 0; }
+  .item-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-bc { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: 'Courier New', monospace; }
+  .item-count-wrap { text-align: right; flex-shrink: 0; }
+  .item-count { font-size: 22px; font-weight: 700; color: var(--teal-600); line-height: 1; }
+  .item-count-lbl { font-size: 10px; color: var(--muted); }
+  .item-edit-btn { width: 34px; height: 34px; border-radius: var(--radius-sm); border: 0.5px solid var(--border); background: var(--bg); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 15px; color: var(--muted); flex-shrink: 0; -webkit-appearance: none; }
+  .empty { text-align: center; padding: 48px 20px; color: var(--muted); }
+  .empty-icon { font-size: 44px; opacity: 0.25; display: block; margin-bottom: 14px; }
+  .empty p { font-size: 14px; line-height: 1.5; }
+
+  .sheet-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; display: none; align-items: flex-end; justify-content: center; }
+  .sheet-backdrop.open { display: flex; }
+  .sheet { background: var(--surface); border-radius: 22px 22px 0 0; padding: 10px 18px calc(env(safe-area-inset-bottom, 20px) + 20px); width: 100%; max-width: 500px; max-height: 92vh; overflow-y: auto; }
+  .sheet-handle { width: 40px; height: 4px; background: var(--gray-100); border-radius: 2px; margin: 6px auto 18px; }
+  .sheet h2 { font-size: 18px; font-weight: 700; margin-bottom: 18px; }
+
+  .field { margin-bottom: 14px; }
+  .field label { font-size: 12px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .field input[type=text], .field input[type=number] { width: 100%; padding: 13px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); font-size: 16px; color: var(--text); -webkit-appearance: none; }
+  .field input:focus { outline: none; border-color: var(--teal-400); background: var(--surface); }
+
+  .scan-trigger { width: 100%; padding: 14px; border: 1.5px dashed var(--teal-400); border-radius: var(--radius); background: var(--teal-50); color: var(--teal-800); font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; -webkit-appearance: none; }
+
+  /* CAMERA — live feed fully visible */
+  .camera-box {
+    position: relative; width: 100%; border-radius: var(--radius);
+    overflow: hidden; background: #000; margin-bottom: 12px;
+    aspect-ratio: 4/3;
+  }
+  .camera-box video {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; display: block;
+  }
+  /* dark overlay only on the sides — centre strip is fully clear */
+  .scan-overlay {
+    position: absolute; inset: 0; pointer-events: none;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+  }
+  .scan-overlay::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+      linear-gradient(to bottom,
+        rgba(0,0,0,0.45) 0%,
+        rgba(0,0,0,0.0) 30%,
+        rgba(0,0,0,0.0) 70%,
+        rgba(0,0,0,0.45) 100%);
+  }
+  .scan-box {
+    position: relative; width: 80%; max-width: 280px; height: 80px;
+    border: 2px solid var(--teal-400); border-radius: 10px; overflow: hidden;
+    box-shadow: 0 0 0 2000px rgba(0,0,0,0.0);
+  }
+  /* corner accents */
+  .scan-box::before, .scan-box::after {
+    content: ''; position: absolute; width: 18px; height: 18px;
+    border-color: #fff; border-style: solid;
+  }
+  .scan-box::before { top: -1px; left: -1px; border-width: 3px 0 0 3px; border-radius: 6px 0 0 0; }
+  .scan-box::after  { bottom: -1px; right: -1px; border-width: 0 3px 3px 0; border-radius: 0 0 6px 0; }
+  .scan-beam {
+    position: absolute; left: 0; right: 0; height: 2px;
+    background: linear-gradient(to right, transparent, var(--teal-400), transparent);
+    animation: beam 1.8s ease-in-out infinite;
+  }
+  @keyframes beam { 0%,100% { top: 2px; opacity: 1; } 50% { top: calc(100% - 4px); opacity: 0.8; } }
+  .scan-label {
+    position: absolute; bottom: 12px; left: 0; right: 0;
+    text-align: center; font-size: 12px; color: rgba(255,255,255,0.85);
+    font-weight: 500; letter-spacing: 0.03em;
+  }
+
+  .stop-cam-btn { width: 100%; padding: 11px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--muted); font-size: 13px; cursor: pointer; margin-bottom: 14px; -webkit-appearance: none; }
+
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+  .btn-cancel { padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--muted); font-size: 15px; font-weight: 500; cursor: pointer; -webkit-appearance: none; }
+  .btn-primary { padding: 14px; border: none; border-radius: var(--radius-sm); background: var(--teal-600); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; -webkit-appearance: none; }
+  .btn-primary:active { background: var(--teal-800); }
+  .btn-danger-full { width: 100%; padding: 14px; border: none; border-radius: var(--radius-sm); background: var(--red-400); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 10px; -webkit-appearance: none; }
+  .btn-ghost-full { width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: transparent; color: var(--muted); font-size: 15px; cursor: pointer; margin-top: 8px; -webkit-appearance: none; }
+
+  .result-item { padding: 13px 0; border-bottom: 0.5px solid var(--border); display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+  .result-item:last-child { border-bottom: none; }
+  .result-name { font-size: 15px; font-weight: 600; }
+  .result-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .result-count { font-size: 22px; font-weight: 700; color: var(--teal-600); }
+
+  .count-input-big { width: 100%; padding: 18px 14px; border: 1.5px solid var(--border); border-radius: var(--radius); background: var(--bg); font-size: 36px; font-weight: 700; text-align: center; color: var(--text); -webkit-appearance: none; margin: 8px 0 20px; }
+  .count-input-big:focus { outline: none; border-color: var(--teal-400); background: var(--surface); }
+
+  .toast { position: fixed; top: 60px; left: 50%; transform: translateX(-50%) translateY(-20px); background: #1a1a18; color: #fff; padding: 11px 22px; border-radius: 24px; font-size: 14px; font-weight: 500; z-index: 999; opacity: 0; transition: opacity 0.25s, transform 0.25s; white-space: nowrap; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* scanning success flash */
+  .flash { position: fixed; inset: 0; background: rgba(255,255,255,0.6); z-index: 9999; pointer-events: none; opacity: 0; transition: opacity 0.15s; }
+  .flash.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="topbar-title">StockCount</div>
+    <div class="topbar-sub">Storage inventory manager</div>
+  </div>
+  <div class="topbar-badge" id="total-badge">0 items</div>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-n" id="stat-items">0</div><div class="stat-l">Products</div></div>
+  <div class="stat"><div class="stat-n" id="stat-units">0</div><div class="stat-l">Total units</div></div>
+  <div class="stat"><div class="stat-n" id="stat-zero">0</div><div class="stat-l">Out of stock</div></div>
+</div>
+
+<div class="action-grid">
+  <button class="act-btn" onclick="openAddItem()">
+    <div class="act-icon icon-teal">➕</div>
+    <div class="act-label">Add product</div>
+    <div class="act-sub">Build database</div>
+  </button>
+  <button class="act-btn" onclick="openUpdateCount()">
+    <div class="act-icon icon-blue">📷</div>
+    <div class="act-label">Update count</div>
+    <div class="act-sub">Scan or search</div>
+  </button>
+  <button class="act-btn" onclick="exportExcel()">
+    <div class="act-icon icon-amber">📊</div>
+    <div class="act-label">Export Excel</div>
+    <div class="act-sub">Download .xlsx</div>
+  </button>
+  <button class="act-btn" onclick="triggerImport()">
+    <div class="act-icon icon-blue">📥</div>
+    <div class="act-label">Import Excel</div>
+    <div class="act-sub">Load from file</div>
+  </button>
+  <button class="act-btn" onclick="openResetConfirm()">
+    <div class="act-icon icon-red">🔄</div>
+    <div class="act-label">Reset counts</div>
+    <div class="act-sub">Set all to zero</div>
+  </button>
+</div>
+
+<div class="search-wrap">
+  <span class="search-icon">🔍</span>
+  <input type="search" id="search-input" placeholder="Search by name, number or barcode…" oninput="renderList()" autocomplete="off" autocorrect="off">
+</div>
+
+<div class="section-label">Inventory</div>
+<div class="item-list" id="item-list"></div>
+
+<div class="sheet-backdrop" id="backdrop" onclick="backdropTap(event)">
+  <div class="sheet" id="sheet-content"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="flash" id="flash"></div>
+<input type="file" id="import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importExcel(event)">
+
+<!-- ZXing barcode library — works in Safari -->
+<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
+<!-- Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+let db = JSON.parse(localStorage.getItem('stockcount_db') || '[]');
+let camStream = null;
+let zxingReader = null;
+let editingId = null;
+
+function save() {
+  localStorage.setItem('stockcount_db', JSON.stringify(db));
+  updateStats();
+}
+
+function updateStats() {
+  document.getElementById('stat-items').textContent = db.length;
+  const totalUnits = db.reduce((s,i) => s+(parseFloat(i.count)||0), 0);
+  document.getElementById('stat-units').textContent = Number.isInteger(totalUnits) ? totalUnits : totalUnits.toFixed(2);
+  document.getElementById('stat-zero').textContent = db.filter(i => (parseFloat(i.count)||0)===0).length;
+  document.getElementById('total-badge').textContent = db.length + (db.length===1?' item':' items');
+}
+
+function renderList() {
+  const q = (document.getElementById('search-input').value||'').toLowerCase().trim();
+  const items = q ? db.filter(i =>
+    i.name.toLowerCase().includes(q) ||
+    i.itemNum.toLowerCase().includes(q) ||
+    (i.barcode||'').toLowerCase().includes(q)
+  ) : db;
+  const el = document.getElementById('item-list');
+  if (!items.length) {
+    el.innerHTML = `<div class="empty"><span class="empty-icon">📦</span><p>${q?'No items match your search':'No products yet.<br>Tap "Add product" to get started.'}</p></div>`;
+    return;
+  }
+  el.innerHTML = items.map(i => `
+    <div class="item-card">
+      <span class="item-num-badge">${esc(i.itemNum)}</span>
+      <div class="item-info">
+        <div class="item-name">${esc(i.name)}</div>
+        <div class="item-bc">${i.barcode ? '▌ '+esc(i.barcode) : 'no barcode'}</div>
+      </div>
+      <div class="item-count-wrap">
+        <div class="item-count">${i.count}</div>
+        <div class="item-count-lbl">units</div>
+      </div>
+      <button class="item-edit-btn" onclick="openEdit('${i.id}')">✏️</button>
+    </div>
+  `).join('');
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function openSheet(html) {
+  document.getElementById('sheet-content').innerHTML = html;
+  document.getElementById('backdrop').classList.add('open');
+}
+function closeSheet() {
+  stopCamera();
+  document.getElementById('backdrop').classList.remove('open');
+  document.getElementById('sheet-content').innerHTML = '';
+  editingId = null;
+}
+function backdropTap(e) {
+  if (e.target === document.getElementById('backdrop')) closeSheet();
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+function flashScreen() {
+  const f = document.getElementById('flash');
+  f.classList.add('show');
+  setTimeout(() => f.classList.remove('show'), 200);
+}
+
+// ── CAMERA ─────────────────────────────────────────────────────────────
+async function startScan(targetFieldId, findMode) {
+  const area = document.getElementById('cam-area');
+  if (!area) return;
+
+  if (!window.ZXing) {
+    area.innerHTML = `<p style="font-size:13px;color:var(--amber-400);padding:8px 0;text-align:center;">Scanner library loading… please wait a moment and try again.</p>`;
+    return;
+  }
+
+  area.innerHTML = `
+    <div class="camera-box">
+      <video id="cam-video" autoplay playsinline muted webkit-playsinline></video>
+      <div class="scan-overlay">
+        <div class="scan-box">
+          <div class="scan-beam"></div>
+        </div>
+        <div class="scan-label">Aim barcode at the frame</div>
+      </div>
+    </div>
+    <button class="stop-cam-btn" onclick="stopCamera(); document.getElementById('cam-area').innerHTML='';">✕ Close camera</button>
+  `;
+
+  const hints = new Map();
+  const formats = [
+    ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8,
+    ZXing.BarcodeFormat.CODE_128, ZXing.BarcodeFormat.CODE_39,
+    ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E,
+    ZXing.BarcodeFormat.QR_CODE, ZXing.BarcodeFormat.DATA_MATRIX,
+    ZXing.BarcodeFormat.ITF,
+  ];
+  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
+  hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+  zxingReader = new ZXing.BrowserMultiFormatReader(hints, 300);
+
+  function onScanResult(result) {
+    const code = result.getText();
+    flashScreen();
+    stopCamera();
+    if (document.getElementById('cam-area')) document.getElementById('cam-area').innerHTML = '';
+    const tf = document.getElementById(targetFieldId);
+    if (tf) tf.value = code;
+    if (findMode) {
+      const found = db.find(i => i.barcode === code);
+      if (found) {
+        toast('\u2713 Found: ' + found.name);
+        setTimeout(() => openCountEntry(found.id), 350);
+      } else {
+        toast('Scanned: ' + code + ' — not in database');
+      }
+    } else {
+      toast('\u2713 Barcode: ' + code);
+    }
+  }
+
+  function showCameraError(msg) {
+    const camArea = document.getElementById('cam-area');
+    if (camArea) camArea.innerHTML = `
+      <div style="background:var(--red-50);border-radius:var(--radius-sm);padding:16px;margin-bottom:14px;">
+        <p style="font-size:14px;font-weight:600;color:var(--red-600);margin-bottom:6px;">Camera error</p>
+        <p style="font-size:13px;color:var(--muted);line-height:1.5;">${msg}</p>
+      </div>`;
+  }
+
+  // First request camera permission directly so we get a real error if denied
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } }
+    });
+  } catch (permErr) {
+    const name = permErr.name || '';
+    if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+      showCameraError('Camera permission was denied. Check your browser site settings and make sure camera is set to <strong>Allow</strong> for this page.');
+    } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+      showCameraError('No camera found on this device.');
+    } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+      showCameraError('Camera is already in use by another app or tab. Close it and try again.');
+    } else {
+      showCameraError('Could not start camera: ' + (permErr.message || name));
+    }
+    return;
+  }
+
+  // Permission granted — stop our test stream and let ZXing restart it properly
+  stream.getTracks().forEach(t => t.stop());
+
+  // Pick back camera by label if possible, otherwise let ZXing choose
+  let deviceId;
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cams = devices.filter(d => d.kind === 'videoinput');
+    const back = cams.find(d => /back|rear|environment/i.test(d.label));
+    deviceId = back ? back.deviceId : (cams[0] ? cams[0].deviceId : undefined);
+  } catch(_) { deviceId = undefined; }
+
+  try {
+    await zxingReader.decodeFromVideoDevice(deviceId, 'cam-video', (result, err) => {
+      if (result) onScanResult(result);
+    });
+  } catch (scanErr) {
+    showCameraError('Scanner failed to start: ' + (scanErr.message || scanErr));
+  }
+}
+
+function stopCamera() {
+  if (zxingReader) { try { zxingReader.reset(); } catch(e){} zxingReader = null; }
+  camStream = null;
+}
+
+// ── ADD ITEM ───────────────────────────────────────────────────────────
+function openAddItem() {
+  openSheet(`
+    <div class="sheet-handle"></div>
+    <h2>Add new product</h2>
+    <div class="field">
+      <label>Barcode</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="f-barcode" placeholder="Scan or type barcode" autocomplete="off" style="flex:1;">
+        <button class="scan-trigger" onclick="startScan('f-barcode', false)" style="width:auto;padding:13px 14px;margin:0;flex-shrink:0;">📷</button>
+      </div>
+    </div>
+    <div id="cam-area"></div>
+    <div class="field"><label>Item number</label><input type="text" id="f-itemnum" placeholder="e.g. SKU-001" autocomplete="off"></div>
+    <div class="field"><label>Item name</label><input type="text" id="f-name" placeholder="Product name"></div>
+    <div class="field"><label>Initial count</label><input type="number" id="f-count" value="0" min="0" step="0.01" inputmode="decimal"></div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeSheet()">Cancel</button>
+      <button class="btn-primary" onclick="saveNewItem()">Add item</button>
+    </div>
+  `);
+  setTimeout(() => {
+    const bc = document.getElementById('f-barcode');
+    const nm = document.getElementById('f-name');
+    const cnt = document.getElementById('f-count');
+    // Focus barcode first (empty by default), keyboard opens immediately
+    if (bc) bc.focus();
+    // Pre-select count so user can type over the 0
+    if (cnt) cnt.addEventListener('focus', () => cnt.select());
+  }, 200);
+}
+
+function saveNewItem() {
+  const barcode = (document.getElementById('f-barcode').value||'').trim();
+  const itemNum = (document.getElementById('f-itemnum').value||'').trim();
+  const name    = (document.getElementById('f-name').value||'').trim();
+  const count   = parseFloat(document.getElementById('f-count').value)||0;
+  if (!name)    { toast('⚠ Item name is required'); return; }
+  if (!itemNum) { toast('⚠ Item number is required'); return; }
+  db.push({ id: Date.now().toString(36)+Math.random().toString(36).slice(2,6), barcode, itemNum, name, count });
+  save(); renderList(); closeSheet(); toast('✓ Product added');
+}
+
+// ── UPDATE COUNT ───────────────────────────────────────────────────────
+function openUpdateCount() {
+  openSheet(`
+    <div class="sheet-handle"></div>
+    <h2>Update item count</h2>
+    <button class="scan-trigger" onclick="startScan('u-barcode', true)">📷  Scan barcode to find item</button>
+    <div id="cam-area"></div>
+    <input type="hidden" id="u-barcode">
+    <div class="field">
+      <label>Or search by name / item number</label>
+      <input type="search" id="u-search" placeholder="Type to search…" oninput="liveSearch()" autocomplete="off" autocorrect="off">
+    </div>
+    <div id="search-results"></div>
+  `);
+  setTimeout(() => { const el = document.getElementById('u-search'); if(el) el.focus(); }, 200);
+}
+
+function liveSearch() {
+  const q = (document.getElementById('u-search').value||'').toLowerCase().trim();
+  const el = document.getElementById('search-results');
+  if (!q) { el.innerHTML = ''; return; }
+  const found = db.filter(i => i.name.toLowerCase().includes(q) || i.itemNum.toLowerCase().includes(q));
+  if (!found.length) { el.innerHTML = '<p style="font-size:13px;color:var(--muted);padding:10px 0;">No items found</p>'; return; }
+  el.innerHTML = found.slice(0,8).map(i => `
+    <div class="result-item" onclick="openCountEntry('${i.id}')">
+      <div>
+        <div class="result-name">${esc(i.name)}</div>
+        <div class="result-meta">${esc(i.itemNum)}${i.barcode?' · '+esc(i.barcode):''}</div>
+      </div>
+      <div class="result-count">${i.count}</div>
+    </div>
+  `).join('');
+}
+
+function openCountEntry(id) {
+  const item = db.find(i => i.id===id);
+  if (!item) return;
+  openSheet(`
+    <div class="sheet-handle"></div>
+    <h2>${esc(item.name)}</h2>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:4px;">${esc(item.itemNum)}${item.barcode?' · '+esc(item.barcode):''}</p>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:0;">Current count: <strong style="color:var(--text)">${item.count}</strong></p>
+    <input type="number" class="count-input-big" id="new-count" value="${item.count}" min="0" step="0.01" inputmode="decimal">
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeSheet()">Cancel</button>
+      <button class="btn-primary" onclick="applyCount('${id}')">Save count</button>
+    </div>
+  `);
+  setTimeout(() => { const el=document.getElementById('new-count'); if(el){el.focus();el.select();} }, 200);
+}
+
+function applyCount(id) {
+  const val = parseFloat(document.getElementById('new-count').value);
+  if (isNaN(val)||val<0) { toast('⚠ Enter a valid number'); return; }
+  const item = db.find(i=>i.id===id);
+  if (item) { item.count=val; save(); renderList(); closeSheet(); toast('✓ Count updated'); }
+}
+
+// ── EDIT ───────────────────────────────────────────────────────────────
+function openEdit(id) {
+  editingId = id;
+  const i = db.find(x=>x.id===id);
+  if (!i) return;
+  openSheet(`
+    <div class="sheet-handle"></div>
+    <h2>Edit product</h2>
+    <div class="field">
+      <label>Barcode</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="e-barcode" value="${esc(i.barcode)}" autocomplete="off" style="flex:1;">
+        <button class="scan-trigger" id="e-scan-btn" onclick="startScan('e-barcode', false)" style="width:auto;padding:13px 14px;margin:0;flex-shrink:0;${i.barcode ? 'display:none;' : ''}">📷</button>
+      </div>
+    </div>
+    <div id="cam-area"></div>
+    <div class="field"><label>Item number</label><input type="text" id="e-itemnum" value="${esc(i.itemNum)}" autocomplete="off"></div>
+    <div class="field"><label>Item name</label><input type="text" id="e-name" value="${esc(i.name)}"></div>
+    <div class="field"><label>Count</label><input type="number" id="e-count" value="${i.count}" min="0" step="0.01" inputmode="decimal"></div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeSheet()">Cancel</button>
+      <button class="btn-primary" onclick="saveEdit()">Save changes</button>
+    </div>
+    <button class="btn-danger-full" onclick="confirmDelete('${id}')">🗑 Delete this item</button>
+  `);
+  setTimeout(() => {
+    const nm = document.getElementById('e-name');
+    if (nm) { nm.focus(); nm.select(); }
+    // watch barcode field — show scan btn when empty
+    const bc = document.getElementById('e-barcode');
+    const scanBtn = document.getElementById('e-scan-btn');
+    if (bc && scanBtn) {
+      bc.addEventListener('input', () => {
+        scanBtn.style.display = bc.value ? 'none' : '';
+      });
+    }
+  }, 200);
+}
+
+function saveEdit() {
+  const i = db.find(x=>x.id===editingId);
+  if (!i) return;
+  i.barcode = (document.getElementById('e-barcode').value||'').trim();
+  i.itemNum = (document.getElementById('e-itemnum').value||'').trim();
+  i.name    = (document.getElementById('e-name').value||'').trim();
+  i.count   = parseFloat(document.getElementById('e-count').value)||0;
+  if (!i.name) { toast('⚠ Item name is required'); return; }
+  save(); renderList(); closeSheet(); toast('✓ Product updated');
+}
+
+function confirmDelete(id) {
+  const i = db.find(x=>x.id===id);
+  if (!i) return;
+  openSheet(`
+    <div class="sheet-handle"></div>
+    <h2>Delete product?</h2>
+    <p style="font-size:15px;color:var(--muted);margin-bottom:24px;">Remove <strong style="color:var(--text)">${esc(i.name)}</strong>? This cannot be undone.</p>
+    <button class="btn-danger-full" onclick="doDelete('${id}')">🗑 Yes, delete</button>
+    <button class="btn-ghost-full" onclick="closeSheet()">Cancel</button>
+  `);
+}
+
+function doDelete(id) {
+  db = db.filter(i=>i.id!==id);
+  save(); renderList(); closeSheet(); toast('Item deleted');
+}
+
+// ── RESET ──────────────────────────────────────────────────────────────
+function openResetConfirm() {
+  openSheet(`
+    <div class="sheet-handle"></div>
+    <h2>Reset all counts?</h2>
+    <p style="font-size:15px;color:var(--muted);margin-bottom:24px;">Set all <strong style="color:var(--text)">${db.length} product${db.length!==1?'s':''}</strong> to zero. Products stay in the database.</p>
+    <button class="btn-danger-full" onclick="doReset()">🔄 Reset all to zero</button>
+    <button class="btn-ghost-full" onclick="closeSheet()">Cancel</button>
+  `);
+}
+
+function doReset() {
+  db.forEach(i=>i.count=0);
+  save(); renderList(); closeSheet(); toast('✓ All counts reset to zero');
+}
+
+// ── IMPORT ─────────────────────────────────────────────────────────────
+function triggerImport() {
+  document.getElementById('import-file').value = '';
+  document.getElementById('import-file').click();
+}
+
+function importExcel(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      if (!rows.length) { toast('⚠ Empty file'); return; }
+
+      // Detect header row — look for known column names
+      let headerRow = 0;
+      const knownHeaders = ['barcode','item number','item name','count','name','sku','qty','quantity'];
+      for (let r = 0; r < Math.min(5, rows.length); r++) {
+        const cells = rows[r].map(c => String(c).toLowerCase().trim());
+        if (cells.some(c => knownHeaders.includes(c))) { headerRow = r; break; }
+      }
+      const headers = rows[headerRow].map(c => String(c).toLowerCase().trim());
+
+      // Map columns flexibly
+      const col = (names) => {
+        for (const n of names) {
+          const idx = headers.indexOf(n);
+          if (idx !== -1) return idx;
+        }
+        return -1;
+      };
+      const iBarcode  = col(['barcode','bar code','upc','ean']);
+      const iItemNum  = col(['item number','item no','item#','sku','code','ref']);
+      const iName     = col(['item name','name','description','product','product name','title']);
+      const iCount    = col(['count','qty','quantity','stock','units','amount']);
+
+      if (iName === -1) { toast('⚠ Could not find an Item Name column'); return; }
+
+      let added = 0, updated = 0, skipped = 0;
+      for (let r = headerRow + 1; r < rows.length; r++) {
+        const row = rows[r];
+        const name    = String(row[iName] ?? '').trim();
+        if (!name) { skipped++; continue; }
+        const barcode = iBarcode >= 0  ? String(row[iBarcode] ?? '').trim()  : '';
+        const itemNum = iItemNum >= 0  ? String(row[iItemNum] ?? '').trim()  : '';
+        const count   = iCount >= 0    ? (parseFloat(row[iCount]) || 0)      : 0;
+
+        // Match existing by barcode (if present) then by itemNum then by name
+        let existing = null;
+        if (barcode) existing = db.find(i => i.barcode && i.barcode === barcode);
+        if (!existing && itemNum) existing = db.find(i => i.itemNum && i.itemNum === itemNum);
+        if (!existing) existing = db.find(i => i.name.toLowerCase() === name.toLowerCase());
+
+        if (existing) {
+          if (barcode)  existing.barcode  = barcode;
+          if (itemNum)  existing.itemNum  = itemNum || existing.itemNum;
+          existing.name  = name;
+          existing.count = count;
+          updated++;
+        } else {
+          db.push({
+            id: Date.now().toString(36) + Math.random().toString(36).slice(2,6) + r,
+            barcode, itemNum: itemNum || ('IMP-' + (db.length+1)), name, count
+          });
+          added++;
+        }
+      }
+      save(); renderList();
+      toast(`✓ Imported: ${added} added, ${updated} updated${skipped ? ', '+skipped+' skipped' : ''}`);
+    } catch(err) {
+      toast('⚠ Could not read file: ' + (err.message || err));
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── EXPORT ─────────────────────────────────────────────────────────────
+function exportExcel() {
+  if (!db.length) { toast('⚠ No items to export'); return; }
+  const rows = [['Barcode','Item Number','Item Name','Count'], ...db.map(i=>[i.barcode,i.itemNum,i.name,i.count])];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{wch:22},{wch:16},{wch:32},{wch:10}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
+  XLSX.writeFile(wb, 'inventory_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  toast('✓ Excel file downloaded');
+}
+
+updateStats();
+renderList();
+</script>
+</body>
+</html>
